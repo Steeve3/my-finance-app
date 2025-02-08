@@ -6,25 +6,38 @@ export default function QuickTransactionModal({ isOpen, onClose }) {
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
-  const today = new Date().toISOString().split("T")[0];
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const today = new Date().toISOString().split("T")[0]; // Formato "YYYY-MM-DD"
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const newTransaction = {
-      date: today,
-      category,
-      description,
-      amount: parseFloat(amount),
-      type: ["Stipendio", "Entrate", "Liquidità Iniziale"].includes(category)
-        ? "income"
-        : "expense",
-      createdAt: serverTimestamp(),
-    };
-    await addDoc(collection(db, "transactions"), newTransaction);
-    setAmount("");
-    setCategory("");
-    setDescription("");
-    onClose();
+    // Se il modulo è già in invio, non fare nulla
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const newTransaction = {
+        date: today,
+        category,
+        description,
+        amount: parseFloat(amount),
+        type: ["Stipendio", "Entrate", "Liquidità Iniziale"].includes(category)
+          ? "income"
+          : "expense",
+        createdAt: serverTimestamp(),
+      };
+      // Aggiunge la transazione a Firestore
+      await addDoc(collection(db, "transactions"), newTransaction);
+      // Pulisce i campi
+      setAmount("");
+      setCategory("");
+      setDescription("");
+      // Chiude il modal solo dopo il completamento
+      onClose();
+    } catch (error) {
+      console.error("Errore durante l'aggiunta della transazione:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -80,14 +93,16 @@ export default function QuickTransactionModal({ isOpen, onClose }) {
               type="button"
               onClick={onClose}
               className="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded"
+              disabled={isSubmitting}
             >
               Annulla
             </button>
             <button
               type="submit"
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded"
+              disabled={isSubmitting}
             >
-              Aggiungi
+              {isSubmitting ? "Inviando..." : "Aggiungi"}
             </button>
           </div>
         </form>
