@@ -1,6 +1,7 @@
 // src/config/firebase.js
 
 import { initializeApp, getApps, getApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 // Use NEXT_PUBLIC_ for environment variables in Next.js
@@ -18,7 +19,7 @@ const firebaseConfig = {
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 // Initialize Firestore
+const auth = getAuth(app);
 const db = getFirestore(app);
-
 // Export Firebase services
-export { db };
+export { db, auth};
