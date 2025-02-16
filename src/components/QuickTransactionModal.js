@@ -1,20 +1,25 @@
 import { useState } from "react";
-import { db } from "../config/firebase";
+import { db, auth } from "../config/firebase";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { toast } from "react-toastify"; // import toast
 
 export default function QuickTransactionModal({ isOpen, onClose }) {
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const today = new Date().toISOString().split("T")[0]; // Formato "YYYY-MM-DD"
+  const today = new Date().toISOString().split("T")[0];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Se il modulo è già in invio, non fare nulla
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error("User not authenticated");
+      }
+
       const newTransaction = {
         date: today,
         category,
@@ -23,17 +28,18 @@ export default function QuickTransactionModal({ isOpen, onClose }) {
         type: ["Stipendio", "Entrate", "Liquidità Iniziale"].includes(category)
           ? "income"
           : "expense",
+        userId: currentUser.uid,
         createdAt: serverTimestamp(),
       };
-      // Aggiunge la transazione a Firestore
+
       await addDoc(collection(db, "transactions"), newTransaction);
-      // Pulisce i campi
+      toast.success("Transazione aggiunta con successo");
       setAmount("");
       setCategory("");
       setDescription("");
-      // Chiude il modal solo dopo il completamento
       onClose();
     } catch (error) {
+      toast.error(error.message);
       console.error("Errore durante l'aggiunta della transazione:", error);
     } finally {
       setIsSubmitting(false);
@@ -43,9 +49,16 @@ export default function QuickTransactionModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="quick-transaction-modal-title"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    >
       <div className="bg-gray-800 text-white rounded-xl p-6 w-11/12 max-w-md animate-fadeIn">
-        <h2 className="text-xl font-bold mb-4">Aggiungi Transazione Rapida</h2>
+        <h2 id="quick-transaction-modal-title" className="text-xl font-bold mb-4">
+          Aggiungi Transazione Rapida
+        </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block mb-1">Categoria</label>
